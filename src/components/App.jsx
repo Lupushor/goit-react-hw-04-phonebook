@@ -1,99 +1,74 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ContactForm } from './Form/ContactForm';
 import { ContactList } from './ContactList/ContatcList';
 import { nanoid } from 'nanoid';
 import { Filter } from './Filter/Filter';
 import { Layout, Phonebook, PhonebookTitle } from './App.styled';
+import initialContacts from './contactsData';
 
-export class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
-  };
+export const App = () => {
+  const [contacts, setContacts] = useState(initialContacts);
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts'); //'contacts' => key
-    const parsedContacts = JSON.parse(contacts);
-    if (parsedContacts) {
-      this.setState({ contacts: parsedContacts });
+  useEffect(() => {
+    const savedContacts = localStorage.getItem('contacts');
+    if (savedContacts) {
+      setContacts(JSON.parse(savedContacts));
     }
-  }
+  }, []);
 
-  componentDidUpdate(_, prevState) {
-    const { contacts } = this.state;
-    if (contacts !== prevState.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(contacts));
-    }
-  }
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  addContact = data => {
+  const addContact = data => {
     const newContact = {
       id: nanoid(),
       name: data.name,
       number: data.number,
     };
 
-    //Делаем проверку на одинаковые значения в имени и номере
     if (
-      this.state.contacts.find(
+      contacts.find(
         contact =>
-          contact.name.toLocaleLowerCase() === data.name.toLocaleLowerCase() ||
+          contact.name.toLowerCase() === data.name.toLowerCase() ||
           contact.number === data.number
       )
     ) {
       return alert(`${data.name} or ${data.number} is already in contacts.`);
     }
 
-    //Записываем новые данные
-    this.setState(prevState => ({
-      contacts: [newContact, ...prevState.contacts],
-    }));
+    setContacts(prevContacts => [newContact, ...prevContacts]);
   };
 
-  //Удаляем данные из списка
-  deleteContact = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
+  const deleteContact = id => {
+    setContacts(prevContacts =>
+      prevContacts.filter(contact => contact.id !== id)
+    );
   };
 
-  //Производим поиск в списке
-  handelChange = e => {
-    this.setState({ filter: e.currentTarget.value });
+  const handleChange = e => {
+    setFilter(e.currentTarget.value);
   };
 
-  //Выводим список из найденного
-  visibleContact = () => {
-    const { contacts, filter } = this.state;
+  const visibleContacts = () => {
     return contacts.filter(contact =>
-      contact.name.toLocaleLowerCase().includes(filter.toLocaleLowerCase())
+      contact.name.toLowerCase().includes(filter.toLowerCase())
     );
   };
 
-  render() {
-    const { filter } = this.state;
+  return (
+    <Layout>
+      <Phonebook>
+        <PhonebookTitle>Phonebook</PhonebookTitle>
+        <ContactForm onSubmit={addContact} />
+      </Phonebook>
 
-    return (
-      <Layout>
-        <Phonebook>
-          <PhonebookTitle>Phonebook</PhonebookTitle>
-          <ContactForm onSubmit={this.addContact} />
-        </Phonebook>
-
-        <div>
-          <h2>Contacts</h2>
-          <Filter filter={filter} onChange={this.handelChange} />
-          <ContactList
-            contacts={this.visibleContact()}
-            onDelete={this.deleteContact}
-          />
-        </div>
-      </Layout>
-    );
-  }
-}
+      <div>
+        <h2>Contacts</h2>
+        <Filter filter={filter} onChange={handleChange} />
+        <ContactList contacts={visibleContacts()} onDelete={deleteContact} />
+      </div>
+    </Layout>
+  );
+};
